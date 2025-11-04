@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from .esp_parser import EspDocument, Record, Subrecord
+from .esp_parser import EspDocument, Record, Subrecord, update_subrecord_string
 from .excel_io import TranslationRow, rows_to_xlsx, xlsx_to_rows
 from .record_definitions import FieldDefinition, RecordDefinitions
 
@@ -18,6 +18,8 @@ class ExtractedString:
     occurrence: int
     definition: FieldDefinition
     text: str
+    encoding: str
+    terminator: bytes
     source_subrecord: Subrecord
     record: Record
 
@@ -38,7 +40,7 @@ class TranslationService:
         extracted: List[ExtractedString] = []
         occurrence_counters: Dict[Tuple[str, str, int], int] = {}
         for record in document.iter_records():
-            for subrecord, definition, text in record.collect_strings(definitions):
+            for subrecord, definition, decoded in record.collect_strings(definitions):
                 key = (record.record_type, subrecord.name, definition.string_table)
                 occurrence = occurrence_counters.get(key, 0)
                 occurrence_counters[key] = occurrence + 1
@@ -49,7 +51,9 @@ class TranslationService:
                         subrecord=subrecord.name,
                         occurrence=occurrence,
                         definition=definition,
-                        text=text,
+                        text=decoded.text,
+                        encoding=decoded.encoding,
+                        terminator=decoded.terminator,
                         source_subrecord=subrecord,
                         record=record,
                     )
@@ -101,7 +105,6 @@ class TranslationService:
                 new_value = translation_map.get(lookup)
                 if new_value is None or new_value == "":
                     continue
-                encoded = new_value.encode("utf-8")
-                subrecord.data[:] = encoded
+                update_subrecord_string(subrecord, new_value)
             record.rebuild_payload()
         return document.rebuild()

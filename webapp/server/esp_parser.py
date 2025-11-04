@@ -74,16 +74,18 @@ class Record:
             self.payload = rebuilt
         self.data_size = len(self.payload)
 
-    def collect_strings(self, definitions: RecordDefinitions) -> Iterator[Tuple[Subrecord, FieldDefinition, str]]:
+    def collect_strings(
+        self, definitions: RecordDefinitions
+    ) -> Iterator[Tuple[Subrecord, FieldDefinition, "DecodedString"]]:
         subrecords = self.ensure_subrecords()
         for sub in subrecords:
             definition = definitions.get(self.record_type, sub.name)
             if not definition:
                 continue
-            text = decode_subrecord_string(sub.data)
-            if text is None:
+            decoded = decode_subrecord_string(sub.data)
+            if decoded is None:
                 continue
-            yield sub, definition, text
+            yield sub, definition, decoded
 
 
 @dataclass
@@ -277,15 +279,65 @@ def _iter_records(node_type: str, node: object) -> Iterator[Record]:
             yield from _iter_records(child_type, child)
 
 
-def decode_subrecord_string(data: bytearray) -> Optional[str]:
+@dataclass(frozen=True)
+class DecodedString:
+    text: str
+    encoding: str
+    terminator: bytes
+
+
+def decode_subrecord_string(data: bytearray) -> Optional[DecodedString]:
     raw = bytes(data)
     if not raw:
-        return ""
-    if raw.endswith(b"\x00"):
+        return DecodedString("", "utf-8", b"")
+
+    terminator = b""
+    if raw.endswith(b"\x00\x00"):
+        terminator = b"\x00\x00"
+        raw = raw[:-2]
+    elif raw.endswith(b"\x00"):
+        terminator = b"\x00"
         raw = raw[:-1]
-    for encoding in ("utf-8", "cp1251", "cp1252"):
+
+    candidates = ("utf-8", "utf-16-le", "cp1251", "cp1252", "latin-1")
+    for encoding in candidates:
         try:
-            return raw.decode(encoding)
+            text = raw.decode(encoding)
+            return DecodedString(text, encoding, terminator)
         except UnicodeDecodeError:
             continue
-    return raw.decode("latin-1", errors="replace")
+    # Final fallback with replacement characters to avoid losing data completely.
+    return DecodedString(raw.decode("latin-1", errors="replace"), "latin-1", terminator)
+
+
+def update_subrecord_string(subrecord: Subrecord, value: str) -> None:
+    decoded = decode_subrecord_string(subrecord.data)
+    terminator = b""
+    if decoded is not None:
+        encoding_candidates = [decoded.encoding]
+        terminator = decoded.terminator
+    else:
+        encoding_candidates = []
+        if bytes(subrecord.data).endswith(b"\x00\x00"):
+            terminator = b"\x00\x00"
+        elif bytes(subrecord.data).endswith(b"\x00"):
+            terminator = b"\x00"
+
+    for encoding in ("utf-8", "cp1251", "cp1252", "utf-16-le", "latin-1"):
+        if encoding not in encoding_candidates:
+            encoding_candidates.append(encoding)
+
+    encoded = None
+    for encoding in encoding_candidates:
+        try:
+            encoded = value.encode(encoding)
+            break
+        except UnicodeEncodeError:
+            continue
+
+    if encoded is None:
+        encoded = value.encode("utf-8", errors="replace")
+
+    if terminator and not encoded.endswith(terminator):
+        encoded += terminator
+    subrecord.data[:] = encoded
