@@ -313,18 +313,31 @@ def decode_subrecord_string(data: bytearray) -> Optional[DecodedString]:
 def update_subrecord_string(subrecord: Subrecord, value: str) -> None:
     decoded = decode_subrecord_string(subrecord.data)
     terminator = b""
+    encoding_candidates: List[str] = []
     if decoded is not None:
-        encoding_candidates = [decoded.encoding]
+        base_encoding = decoded.encoding.lower()
         terminator = decoded.terminator
     else:
-        encoding_candidates = []
+        base_encoding = ""
+        terminator = b""
         if bytes(subrecord.data).endswith(b"\x00\x00"):
             terminator = b"\x00\x00"
         elif bytes(subrecord.data).endswith(b"\x00"):
             terminator = b"\x00"
 
-    for encoding in ("utf-8", "cp1251", "cp1252", "utf-16-le", "latin-1"):
-        if encoding not in encoding_candidates:
+    if base_encoding and base_encoding not in encoding_candidates:
+        # Prefer the detected encoding for wide strings, but allow single-byte strings
+        # to fall back to locale-specific code pages before UTF-8.
+        if terminator == b"\x00\x00":
+            encoding_candidates.append(base_encoding)
+    if terminator == b"\x00\x00":
+        fallback_order = ["utf-16-le", "utf-8", "cp1251", "cp1252", "latin-1"]
+    else:
+        if base_encoding and base_encoding not in encoding_candidates and base_encoding not in {"utf-8"}:
+            encoding_candidates.append(base_encoding)
+        fallback_order = ["cp1251", "cp1252", "latin-1", "utf-8", "utf-16-le"]
+    for encoding in fallback_order:
+        if encoding and encoding not in encoding_candidates:
             encoding_candidates.append(encoding)
 
     encoded = None
