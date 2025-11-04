@@ -1,0 +1,81 @@
+:root {
+  color-scheme: dark light;
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: #f0f0f0;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+h1,
+ h2 {
+  color: #ffd166;
+}
+
+section {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-weight: 600;
+}
+
+input,
+ select,
+ button {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+}
+
+button {
+  background: linear-gradient(135deg, #ffd166, #ef476f);
+  color: #111;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 71, 111, 0.35);
+}
+
+#status {
+  min-height: 1.5rem;
+  font-style: italic;
+}
+
+#status.error {
+  color: #ef476f;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1.5rem 1rem 3rem;
+  }
+}
