@@ -2,6 +2,26 @@
 
 This software is an advanced tool for to translate Skyrim, SkyrimSE and Fallout4 mods from a language to another one.
 
+## Browser-based translation helper
+
+A lightweight FastAPI application is available in `webapp/` to export and import
+translatable strings via a browser interface.
+
+### Quick start
+
+```bash
+cd webapp
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+uvicorn server.app:app --reload
+```
+
+Then open <http://127.0.0.1:8000> in your browser. Upload an ESP/ESM file,
+select the target game, download the generated Excel file, edit the
+translations, and upload it back to rebuild the plugin with the translated
+strings.
+
 it's actually the same tool for each game, and comes with a different name:
 -tesvTranslator for Skyrim
 -sseTranslator for Skyrim SpecialEdition

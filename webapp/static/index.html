@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>xTranslator Browser Bridge</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>xTranslator Browser Bridge</h1>
+      <p>
+        Загрузите ESP/ESM файл и выберите игру, чтобы выгрузить все переводимые строки
+        в Excel. После перевода можно загрузить Excel обратно и получить обновлённый ESP.
+      </p>
+
+      <section>
+        <h2>1. Выгрузка переводов</h2>
+        <form id="extract-form">
+          <label>
+            Игра
+            <select name="game" id="extract-game"></select>
+          </label>
+          <label>
+            ESP/ESM файл
+            <input type="file" name="esp" accept=".esp,.esm,.esl" required />
+          </label>
+          <button type="submit">Скачать Excel</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>2. Загрузка перевода обратно</h2>
+        <form id="apply-form">
+          <label>
+            Игра
+            <select name="game" id="apply-game"></select>
+          </label>
+          <label>
+            Оригинальный ESP/ESM файл
+            <input type="file" name="esp" accept=".esp,.esm,.esl" required />
+          </label>
+          <label>
+            Excel с переводом
+            <input type="file" name="workbook" accept=".xlsx" required />
+          </label>
+          <button type="submit">Скачать обновлённый ESP</button>
+        </form>
+      </section>
+
+      <div id="status" role="status"></div>
+    </main>
+    <script src="/static/script.js" type="module"></script>
+  </body>
+</html>
