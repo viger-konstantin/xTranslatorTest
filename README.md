@@ -22,6 +22,17 @@ select the target game, download the generated Excel file, edit the
 translations, and upload it back to rebuild the plugin with the translated
 strings.
 
+### Reloading the development server
+
+Running uvicorn with the `--reload` flag (as shown above) automatically
+restarts the server whenever you change Python files in the `webapp/server`
+package or the static assets in `webapp/static`. Simply keep the terminal
+window open—uvicorn watches for file changes and restarts itself.
+
+If you launched uvicorn without `--reload`, press `Ctrl+C` in the terminal to
+stop the process and rerun the command after you finish editing files. On
+Windows PowerShell or Command Prompt the shortcut is the same.
+
 it's actually the same tool for each game, and comes with a different name:
 -tesvTranslator for Skyrim
 -sseTranslator for Skyrim SpecialEdition

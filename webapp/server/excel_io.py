@@ -44,6 +44,7 @@ def rows_to_xlsx(rows: Sequence[TranslationRow]) -> bytes:
 
 def xlsx_to_rows(data: bytes) -> Iterator[TranslationRow]:
     with zipfile.ZipFile(BytesIO(data)) as archive:
+        shared_strings = _load_shared_strings(archive)
         with archive.open("xl/worksheets/sheet1.xml") as sheet_file:
             tree = ET.parse(sheet_file)
     root = tree.getroot()
@@ -58,11 +59,7 @@ def xlsx_to_rows(data: bytes) -> Iterator[TranslationRow]:
             col_index = _col_index(ref)
             if col_index >= len(values):
                 continue
-            text_node = cell.find("s:is/s:t", ns)
-            if text_node is None:
-                values[col_index] = ""
-            else:
-                values[col_index] = text_node.text or ""
+            values[col_index] = _cell_text(cell, ns, shared_strings)
         if values == HEADERS:
             continue
         if not any(values):
@@ -82,6 +79,52 @@ def xlsx_to_rows(data: bytes) -> Iterator[TranslationRow]:
             original=values[5],
             translation=values[6],
         )
+
+
+def _load_shared_strings(archive: zipfile.ZipFile) -> List[str]:
+    if "xl/sharedStrings.xml" not in archive.namelist():
+        return []
+    with archive.open("xl/sharedStrings.xml") as shared_file:
+        tree = ET.parse(shared_file)
+    ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    root = tree.getroot()
+    strings: List[str] = []
+    for si in root.findall("s:si", ns):
+        text_parts: List[str] = []
+        for node in si.findall(".//s:t", ns):
+            text_parts.append(node.text or "")
+        strings.append("".join(text_parts))
+    return strings
+
+
+def _cell_text(cell: ET.Element, ns: dict, shared_strings: Sequence[str]) -> str:
+    cell_type = (cell.get("t") or "").lower()
+    if cell_type == "inlineStr".lower():
+        inline = cell.find("s:is", ns)
+        if inline is None:
+            return ""
+        parts: List[str] = []
+        for node in inline.findall(".//s:t", ns):
+            parts.append(node.text or "")
+        return "".join(parts)
+    if cell_type == "s":
+        value_node = cell.find("s:v", ns)
+        if value_node is None:
+            return ""
+        try:
+            index = int(value_node.text or "0")
+        except ValueError:
+            return ""
+        if 0 <= index < len(shared_strings):
+            return shared_strings[index]
+        return ""
+    value_node = cell.find("s:v", ns)
+    if value_node is not None and value_node.text is not None:
+        return value_node.text
+    text_node = cell.find("s:is/s:t", ns)
+    if text_node is not None and text_node.text is not None:
+        return text_node.text
+    return ""
 
 
 def _worksheet(rows: Sequence[TranslationRow]) -> str:
